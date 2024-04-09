@@ -5,7 +5,7 @@
 void save_bitmap(easyfont_render_cxt_t *pctx, const char* filename) {
     FILE *fp = fopen(filename, "wb");
     bitmap *pbitmap  = (bitmap*)calloc(1, sizeof(bitmap));
-    strcpy(pbitmap->fileheader.signature, "BM");
+    strcpy(pbitmap->fileheader.signature, "BM"); // fi.bfType    = 0x4D42;
     pbitmap->fileheader.filesize = pctx->height * pctx->width * pctx->bbp + sizeof(bitmap);
     pbitmap->fileheader.fileoffset_to_pixelarray = sizeof(bitmap);
     pbitmap->bitmapinfoheader.dibheadersize = sizeof(bitmapinfoheader);
@@ -24,9 +24,77 @@ void save_bitmap(easyfont_render_cxt_t *pctx, const char* filename) {
     free(pbitmap);
     fclose(fp);
 }
+#include <math.h>
+void save_bitmap_1bit(easyfont_render_cxt_t *pctx, const char* filename) {
+    FILE *fp = fopen(filename, "wb");
 
-void render_save_bitmap(easyfont_render_cxt_t *pctx) {
-    save_bitmap(pctx, "test.bmp");
+    // int prow = (pctx->width + 31) / 32 * sizeof(uint32_t);
+    // int prow = pctx->width % 8 ? (pctx->width + 31) / 32 * 4 : pctx->width / 8;
+    // 8 - (pctx->width % 8)
+    int mod = 32 - (pctx->width % 32);
+    int prow = pctx->width % 8 ? (pctx->width + mod) / 32 * 4 : pctx->width / 8;
+    double dd = (pctx->width + 31) / 32;
+    // int prow = (dd) * sizeof(uint32_t);
+    uint32_t size  = prow * pctx->height;
+    uint8_t *pixelbuffer = (uint8_t*)calloc(1, size);
+    int pitch = -prow;
+
+    // double g = pctx->width / 8;
+
+    float g = ceil(pctx->width / 8);
+    printf("pctx->width: %d, g: %.6f %d\n", pctx->width, g, pctx->width % 8);
+    printf("prow %d; prow * 8 %d\n", prow, prow * 8);
+    printf("dd: %f; mod: %d; s: %d\n", dd, mod, pctx->width + mod);
+
+    memset(pixelbuffer, 0, size);
+
+    for (int x = 0; x < pctx->height; x++) {
+        for (int y = 0; y < prow; y++) {
+            if ((x == 0) | (x == pctx->height - 1)) {
+                pixelbuffer[x * prow + y] = 0xFF;
+            } else {
+                if ((y == 0) ) {
+                    pixelbuffer[x * prow + y] = 0x80;
+                // } else if (y == prow - 1) {
+                } else if (y == (pctx->width / 8) - 1) {
+                    // printf("y:          %d\n", y);
+                    pixelbuffer[x * prow + y] = 0x01;
+                }
+            }
+        }
+    }
+
+    uint32_t isize = sizeof(bmp_info_t) + 2 * sizeof(uint32_t);
+
+    bmp_file_t fi = {0};
+    fi.bfType    = 0x4D42;
+    fi.bfOffBits = sizeof(fi) + isize;
+    fi.bfSize    = isize + size;
+    fwrite(&fi, 1, sizeof(fi), fp);
+
+    bmp_info_t im = {0};
+    im.biSize          = sizeof(im);
+    im.biPlanes        = 1;
+    im.biXPelsPerMeter = im.biYPelsPerMeter = 0; // 2834;
+    im.biWidth         = pctx->width;
+    im.biHeight        = (pitch < 0) ? pctx->height : -pctx->height;
+    im.biBitCount      = 1;
+    im.biSizeImage     = size;
+    // im.biClrUsed       = 2;
+    // im.biClrImportant  = 0;
+    fwrite(&im, 1, sizeof(im), fp);
+
+    uint32_t rgb[] = { 0x0, 0x00ff00 };
+    // uint32_t rgb[] = { 0x0, ~0x0 };
+    fwrite(&rgb[0], 1, sizeof(rgb), fp);
+    fwrite(pixelbuffer, 1, size, fp);
+    fflush(fp);
+    free(pixelbuffer);
+    fclose(fp);
+}
+
+void render_save_bitmap(easyfont_render_cxt_t *pctx, const char* filename) {
+    save_bitmap_1bit(pctx, filename);
 }
 
 easyfont_render_cxt_t *render_init(uint32_t width, uint32_t height, uint8_t bbp) {
@@ -104,7 +172,8 @@ void render_draw_pixel(easyfont_render_cxt_t *ctx, uint16_t x, uint16_t y, color
     // *(ctx->pixelbuffer + location + 3) = 0;    // alpha
 }
 
-void render_fill_rect(easyfont_render_cxt_t *ctx, uint16_t x, uint16_t y, uint16_t width, uint16_t height, color_t color) {
+void render_fill_rect(
+    easyfont_render_cxt_t *ctx, uint16_t x, uint16_t y, uint16_t width, uint16_t height, color_t color) {
     render_set_bound(ctx, x, y, x + width - 1, y + height - 1);
 
     uint32_t area = width * height;

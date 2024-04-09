@@ -22,12 +22,12 @@
 
 int main (int argc , char *argv[]) {
 
+#if 0
     easyfont_render_cxt_t *pctx = render_init(1768, 48, 3);
     if (!pctx) {
         printf("pctx 1 is NULL\n");
         exit(-1);
     }
-
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
 
@@ -37,7 +37,17 @@ int main (int argc , char *argv[]) {
     printf("now: %s\n", text_test);
 
     render_draw_string(pctx, 0, 0, select_fnt, text_test);
-    render_save_bitmap(pctx);
+#else
+    int width = 529;
+    // int width = 512;
+    int height = 300;
+    easyfont_render_cxt_t *pctx = render_init(width, height, 3);
+    if (!pctx) {
+        printf("pctx 1 is NULL\n");
+        exit(-1);
+    }
+#endif
+    render_save_bitmap(pctx, "test2.bmp");
     render_deinit(pctx);
     exit(0);
 }

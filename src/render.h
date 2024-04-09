@@ -87,6 +87,31 @@ typedef struct {
 } bitmap;
 #pragma pack(pop)
 
+#pragma pack(push, 2)
+typedef struct {
+    uint16_t bfType;
+    // uint8_t bfType[2];
+    uint32_t bfSize;
+    uint16_t bfReserved1;
+    uint16_t bfReserved2;
+    uint32_t bfOffBits;
+} bmp_file_t;
+#pragma pack(pop)
+
+typedef struct {
+    uint32_t biSize;
+    int32_t  biWidth;
+    int32_t  biHeight;
+    uint16_t biPlanes;
+    uint16_t biBitCount;
+    uint32_t biCompression;
+    uint32_t biSizeImage;
+    int32_t  biXPelsPerMeter;
+    int32_t  biYPelsPerMeter;
+    uint32_t biClrUsed;
+    uint32_t biClrImportant;
+} bmp_info_t;
+
 #if (CONFIG_BPP == 1u)
 #define BRUSH_COLOR_SIZE 2
 #elif (CONFIG_BPP == 2u)
@@ -114,7 +139,7 @@ typedef struct {
 
 easyfont_render_cxt_t *render_init(uint32_t width, uint32_t height, uint8_t bbp);
 void render_deinit(easyfont_render_cxt_t *ctx);
-void render_save_bitmap(easyfont_render_cxt_t *pctx);
+void render_save_bitmap(easyfont_render_cxt_t *pctx, const char* filename);
 void save_bitmap(easyfont_render_cxt_t *pctx, const char* filename);
 void render_draw_pixel(easyfont_render_cxt_t *ctx, uint16_t x, uint16_t y, color_t color);
 void render_fill_rect(easyfont_render_cxt_t *ctx, uint16_t x, uint16_t y, uint16_t width, uint16_t height, color_t color);
